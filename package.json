@@ -1,7 +1,7 @@
 {
-  "name": "async-iterators",
-  "version": "0.2.2",
-  "description": "utility functions for async iterators",
+  "name": "simple-stream",
+  "version": "0.0.1",
+  "description": "utility functions simple streams",
   "homepage": "https://github.com/mirkokiefer/async-iterators",
   "main": "index.js",
   "scripts": {
@@ -12,5 +12,6 @@
   "devDependencies": {
     "mocha": "~1.11.0"
   },
-  "engines" : { "node" : ">=0.10" }
+  "engines" : { "node" : ">=0.10" },
+  "keywords": ["simple-stream"]
 }

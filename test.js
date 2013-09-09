@@ -1,8 +1,8 @@
 
 var assert = require('assert')
-var iterators = require('./index')
+var sstream = require('./index')
 var fs = require('fs')
-var stream = require('stream')
+var Readable = require('stream').Readable
 
 var numbers = []
 for (var i = 1; i < 100; i++) {
@@ -27,7 +27,7 @@ var createMockAsyncIterator = function() {
 
 var runForEachIteratorTest = function(iterator, cb) {
   var index = 0
-  iterators.forEach(iterator, function(err, each) {
+  sstream.forEach(iterator, function(err, each) {
     assert.equal(each, numbers[index])
     index++
   }, function() {
@@ -44,7 +44,7 @@ describe('async-iterators', function() {
   it('should run forEachAsync on an iterator', function(done) {
     var iterator = createMockAsyncIterator()
     var index = 0
-    iterators.forEachAsync(iterator, function(err, each, cb) {
+    sstream.forEachAsync(iterator, function(err, each, cb) {
       assert.equal(each, numbers[index])
       index++
       cb()
@@ -55,62 +55,62 @@ describe('async-iterators', function() {
   })
   it('should pipe an iterator to an array', function(done) {
     var iterator = createMockAsyncIterator()
-    iterators.toArray(iterator, function(err, res) {
+    sstream.toArray(iterator, function(err, res) {
       assert.deepEqual(res, numbers)
       done()
     })
   })
   it('should create a map iterator and pipe to array', function(done) {
     var iterator = createMockAsyncIterator()
-    var doublingIterator = iterators.map(iterator, function(err, each) {
+    var doublingIterator = sstream.map(iterator, function(err, each) {
       return doubleFn(each)
     })
-    iterators.toArray(doublingIterator, function(err, res) {
+    sstream.toArray(doublingIterator, function(err, res) {
       assert.deepEqual(res, numbersDoubled)
       done()
     })
   })
   it('should create an asyncMap iterator', function(done) {
     var iterator = createMockAsyncIterator()
-    var doublingIterator = iterators.mapAsync(iterator, function(err, each, cb) {
+    var doublingIterator = sstream.mapAsync(iterator, function(err, each, cb) {
       cb(null, doubleFn(each))
     })
-    iterators.toArray(doublingIterator, function(err, res) {
+    sstream.toArray(doublingIterator, function(err, res) {
       assert.deepEqual(res, numbersDoubled)
       done()
     })
   })
   it('should create a filter iterator', function(done) {
     var iterator = createMockAsyncIterator()
-    var filterIterator = iterators.filter(iterator, function(err, each) {
+    var filterIterator = sstream.filter(iterator, function(err, each) {
       return evenFn(each)
     })
-    iterators.toArray(filterIterator, function(err, res) {
+    sstream.toArray(filterIterator, function(err, res) {
       assert.deepEqual(res, evenNumbers)
       done()
     })
   })
   it('should create an async filter iterator', function(done) {
     var iterator = createMockAsyncIterator()
-    var filterIterator = iterators.filterAsync(iterator, function(err, each, cb) {
+    var filterIterator = sstream.filterAsync(iterator, function(err, each, cb) {
       cb(null, evenFn(each))
     })
-    iterators.toArray(filterIterator, function(err, res) {
+    sstream.toArray(filterIterator, function(err, res) {
       assert.deepEqual(res, evenNumbers)
       done()
     })
   })
   it('should create a buffering iterator', function(done) {
     var iterator = createMockAsyncIterator()
-    var bufferIterator = iterators.buffer(iterator, 10)
+    var bufferIterator = sstream.buffer(iterator, 10)
     var bufferFillRatio = 0
-    var slowMapIterator = iterators.mapAsync(bufferIterator, function(err, res, cb) {
+    var slowMapIterator = sstream.mapAsync(bufferIterator, function(err, res, cb) {
       setTimeout(function() {
         bufferFillRatio += bufferIterator.bufferFillRatio() / numbers.length
         cb(null, res)
       }, 2)
     })
-    iterators.toArray(slowMapIterator, function(err, res) {
+    sstream.toArray(slowMapIterator, function(err, res) {
       assert.deepEqual(res, numbers)
       console.log(bufferFillRatio)
       assert.ok(bufferFillRatio > 0.5)
@@ -118,18 +118,18 @@ describe('async-iterators', function() {
     })
   })
   it('should create an array iterator', function(done) {
-    var arrayIterator = iterators.fromArray(numbers)
-    iterators.toArray(arrayIterator, function(err, res) {
+    var arrayIterator = sstream.fromArray(numbers)
+    sstream.toArray(arrayIterator, function(err, res) {
       assert.deepEqual(res, numbers)
       done()
     })
   })
   it('should create a readable stream iterator', function(done) {
     function MockStream(opt) {
-      stream.Readable.call(this, opt)
+      Readable.call(this, opt)
       this.index = 0
     }
-    require('util').inherits(MockStream, stream.Readable)
+    require('util').inherits(MockStream, Readable)
 
     MockStream.prototype._read = function() {
       mockStream.push(numbers[this.index])
@@ -139,32 +139,32 @@ describe('async-iterators', function() {
     
     var mockStream = new MockStream(({objectMode: true, highWaterMark: 2}))
     
-    var streamIterator = iterators.fromReadableStream(mockStream)
-    iterators.toArray(streamIterator, function(err, res) {
+    var streamIterator = sstream.fromReadableStream(mockStream)
+    sstream.toArray(streamIterator, function(err, res) {
       assert.deepEqual(res, numbers)
       done()
     })
   })
   it('should create a range iterator', function(done) {
     var iterator = createMockAsyncIterator()
-    var rangeIterator = iterators.range(iterator, {from: 10, to: 19})
-    iterators.toArray(rangeIterator, function(err, res) {
+    var rangeIterator = sstream.range(iterator, {from: 10, to: 19})
+    sstream.toArray(rangeIterator, function(err, res) {
       assert.deepEqual(res, numbers.slice(10, 20))
       done()
     })
   })
   it('should create a range iterator with no end', function(done) {
     var iterator = createMockAsyncIterator()
-    var rangeIterator = iterators.range(iterator, {from: 90})
-    iterators.toArray(rangeIterator, function(err, res) {
+    var rangeIterator = sstream.range(iterator, {from: 90})
+    sstream.toArray(rangeIterator, function(err, res) {
       assert.deepEqual(res, numbers.slice(90))
       done()
     })
   })
   it('should create a range iterator with no start', function(done) {
     var iterator = createMockAsyncIterator()
-    var rangeIterator = iterators.range(iterator, {to: 19})
-    iterators.toArray(rangeIterator, function(err, res) {
+    var rangeIterator = sstream.range(iterator, {to: 19})
+    sstream.toArray(rangeIterator, function(err, res) {
       assert.deepEqual(res, numbers.slice(0, 20))
       done()
     })
@@ -173,10 +173,10 @@ describe('async-iterators', function() {
     var path = __dirname + '/output.txt'
     var writeStream = fs.createWriteStream(path)
     var iterator = createMockAsyncIterator()
-    var stringIterator = iterators.map(iterator, function(err, res) {
+    var stringIterator = sstream.map(iterator, function(err, res) {
       return res.toString()
     })
-    iterators.toWritableStream(stringIterator, writeStream, 'utf8', function() {
+    sstream.toWritableStream(stringIterator, writeStream, 'utf8', function() {
       var output = fs.readFileSync(path, {encoding: 'utf8'})
       fs.unlinkSync(path)
       assert.deepEqual(output, numbers.join(''))
