@@ -1,85 +1,84 @@
 
 var EventEmitter = require('events').EventEmitter
 
-var iterators = {}
+var stream = {}
 
-iterators.forEach = function(iterator, fn, cb) {
-  iterator.next(function(err, res) {
-    if (res === undefined) return cb(err, undefined)
-    fn(err, res)
-    iterators.forEach(iterator, fn, cb)
-  })
-}
-
-iterators.forEachAsync = function(iterator, fn, cb) {
-  iterator.next(function(err, res) {
-    if (res === undefined) return cb(err, undefined)
-    fn(err, res, function() {
-      iterators.forEachAsync(iterator, fn, cb)      
-    })
-  })
-}
-
-iterators.map = function(iterator, fn) {
-  return {
-    next: function(cb) {
-      iterator.next(function(err, res) {
-        if ((res === undefined) || err) return cb(err, undefined)
-        var mappedRes = fn(err, res)
-        cb(err, mappedRes)
-      })
-    }
-  }
-}
-
-iterators.mapAsync = function(iterator, fn) {
-  return {
-    next: function(cb) {
-      iterator.next(function(err, res) {
-        if ((res === undefined) || err) return cb(err, undefined)
-        fn(err, res, function(err, mappedRes) {
-          cb(err, mappedRes)          
-        })
-      })
-    }
-  }
-}
-
-iterators.filter = function(iterator, fn) {
-  var next = function(cb) {
-    iterator.next(function(err, res) {
+stream.forEach = function(inputStream, fn) {
+  return continuable
+  function continuable(cb) {
+    inputStream.read(function(err, res) {
       if (res === undefined) return cb(err, undefined)
-      if (fn(err, res)) {
+      fn(res)
+      continuable(cb)
+    })
+  }
+}
+
+stream.forEachAsync = function(inputStream, fn) {
+  return continuable
+  function continuable(cb) {
+    inputStream.read(function(err, res) {
+      if (res === undefined) return cb(err, undefined)
+      fn(res, function(err) {
+        if (err) return cb(err)
+        continuable(cb)      
+      })
+    })
+  }
+}
+
+stream.map = function(inputStream, fn) {
+  return {read: read}
+  function read(cb) {
+    inputStream.read(function(err, res) {
+      if (res === undefined) return cb(err, undefined)
+      cb(null, fn(res))
+    })
+  }
+}
+
+stream.mapAsync = function(inputStream, fn) {
+  return {read: read}
+  function read(cb) {
+    inputStream.read(function(err, res) {
+      if (res === undefined) return cb(err, undefined)
+      fn(res, cb)
+    })
+  }
+}
+
+stream.filter = function(inputStream, fn) {
+  return {read: read}
+  function read(cb) {
+    inputStream.read(function(err, res) {
+      if (res === undefined) return cb(err, undefined)
+      if (fn(res)) {
         cb(null, res)
       } else {
-        next(cb)
+        read(cb)
       }
     })
   }
-  return {
-    next: next
-  }
 }
 
-iterators.filterAsync = function(iterator, fn) {
-  var next = function(cb) {
-    iterator.next(function(err, res) {
+stream.filterAsync = function(inputStream, fn) {
+  return {read: read}
+  function read(cb) {
+    inputStream.read(function(err, res) {
       if (res === undefined) return cb(err, undefined)
-      fn(err, res, function(err, passedFilter) {
-        if (passedFilter)  {
+      fn(res, function(err, passedFilter) {
+        if (err) return cb(err)
+        if (passedFilter) {
           cb(null, res)
         } else {
-          next(cb)
+          read(cb)
         }
       })
     })
   }
-  return {
-    next: next
-  }
 }
 
-iterators.buffer = function(iterator, size) {
+stream.buffer = function(inputStream, size) {
   var buffer = []
   var bufferingInProgress = false
   var hasEnded = false
@@ -104,7 +103,7 @@ iterators.buffer = function(iterator, size) {
       bufferingInProgress = false
       return
     }
-    iterator.next(function(err, res) {
+    inputStream.read(function(err, res) {
       if (res === undefined) hasEnded = true
       buffer.push(res)
       bufferEvents.emit('data')
@@ -114,7 +113,7 @@ iterators.buffer = function(iterator, size) {
 
   var publicObj = {
     bufferFillRatio: function() { return buffer.length / size },
-    next: function(cb) {
+    read: function(cb) {
       readBuffer(function(err, res) {
         cb(err, res)
       })
@@ -123,19 +122,18 @@ iterators.buffer = function(iterator, size) {
   return publicObj
 }
 
-iterators.fromArray = function(array, cb) {
+stream.fromArray = function(array, cb) {
   var i = 0
-  return {
-    next: function(cb) {
-      if (i == array.length) return cb(null, undefined)
-      var value = array[i]
-      i++
-      cb(null, value)
-    }
+  return {read: read}
+  function read(cb) {
+    if (i == array.length) return cb(null, undefined)
+    var value = array[i]
+    i++
+    cb(null, value)
   }
 }
 
-iterators.fromReadableStream = function(readable) {
+stream.fromReadableStream = function(readable) {
   var isReadable = true
   var hasEnded = false
 
@@ -146,7 +144,7 @@ iterators.fromReadableStream = function(readable) {
     hasEnded = true
   })
 
-  var next = function(cb) {
+  function read(cb) {
     if (hasEnded) {
       return cb(null, undefined)
     }
@@ -154,58 +152,63 @@ iterators.fromReadableStream = function(readable) {
       var res = readable.read()
       if (res === null) {
         isReadable = false
-        return next(cb)
+        return read(cb)
       }
       cb(null, res)
     } else {
-      var onEnd = function() { next(cb) }
+      var onEnd = function() { read(cb) }
       readable.once('readable', function() {
         readable.removeListener('end', onEnd)
-        next(cb)
+        read(cb)
       })
       readable.once('end', onEnd)
     }
   }
 
-  return {next: next}
+  return {read: read}
 }
 
-iterators.toArray = function(iterator, cb) {
-  var array = []
-  iterators.forEach(iterator, function(err, each) {
-    array.push(each)
-  }, function() {
-    cb(null, array)
-  })
+stream.toArray = function(inputStream) {
+  return function(cb) {
+    var array = []
+    stream.forEach(inputStream, function(each) {
+      array.push(each)
+    })(function(err) {
+      if (err) return cb(err)
+      cb(null, array)
+    })
+  }
 }
 
-iterators.range = function(iterator, opts) {
+stream.range = function(inputStream, opts) {
   var from = opts.from
   var to = opts.to
   var pos = -1
-  var next = function(cb) {
-    iterator.next(function(err, value) {
+  return {read: read}
+  function read(cb) {
+    inputStream.read(function(err, value) {
+      if (value === undefined || pos >= to) return cb(err, undefined)
       pos++
-      if (pos < from) return next(cb)
-      if (pos > to) return cb(null, undefined)
-      cb(err, value)
-    })
-  }
-  return {next: next}
-}
-
-iterators.toWritableStream = function(iterator, writeStream, encoding, cb) {
-  write(cb);
-  function write(cb) {
-    iterator.next(function(err, res) {
-      if (res === undefined) return writeStream.write('', encoding, cb)
-      if (writeStream.write(res, encoding)) {
-        write(cb)
-      } else {
-        writeStream.once('drain', function() { write(cb) })
-      }
+      if (pos < from) return read(cb)
+      cb(null, value)
     })
   }
 }
 
-module.exports = iterators
+stream.toWritableStream = function(inputStream, writeStream, encoding) {
+  return function(cb) {
+    write(cb)
+    function write(cb) {
+      inputStream.read(function(err, res) {
+        if (res === undefined) return writeStream.write('', encoding, cb)
+        if (writeStream.write(res, encoding)) {
+          write(cb)
+        } else {
+          writeStream.once('drain', function() { write(cb) })
+        }
+      })
+    }
+  }
+}
+
+module.exports = stream
