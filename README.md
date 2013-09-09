@@ -1,18 +1,16 @@
-#Simple Streams
+#Simple Stream
 [![Build Status](https://travis-ci.org/mirkokiefer/simple-stream.png?branch=master)](https://travis-ci.org/mirkokiefer/simple-stream)
 
 [![NPM](https://nodei.co/npm/simple-stream.png)](https://nodei.co/npm/simple-stream/)
 
-** Note: This is a work in progress of rewriting [async-iterators](https://github.com/mirkokiefer/async-iterators) using the Simple Stream protocol **
-
-Useful stream sources, filters and sinks for [Simple Streams](https://github.com/creationix/js-git/blob/master/specs/simple-stream.md).
+Useful stream sources, transforms and sinks for [Simple Streams](https://github.com/creationix/js-git/blob/master/specs/simple-stream.md).
 
 ##Documentation
 ###Sources
 - [fromArray](#fromArray)
 - [fromReadableStream](#fromReadableStream)
 
-###Filters
+###Transforms
 - [map](#map) / [mapAsync](#mapAsync)
 - [filter](#filter) / [filterAsync](#filterAsync)
 - [range](#range)
@@ -42,7 +40,7 @@ var readStream = fs.createReadStream('input.txt', {encoding: 'utf8'})
 var streamStream = stream.fromReadableStream(readStream)
 ```
 
-##Filters
+##Transforms
 
 <a name="map" />
 ### map(stream, mapFn) -> stream
