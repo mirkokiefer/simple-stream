@@ -1,6 +1,6 @@
 {
   "name": "simple-stream",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "utility functions for simple streams",
   "homepage": "https://github.com/mirkokiefer/simple-stream",
   "main": "index.js",
