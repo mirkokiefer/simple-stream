@@ -3,12 +3,16 @@ sources = {}
 
 sources.fromArray = function(array, cb) {
   var i = 0
-  return {read: read}
+  return {read: read, abort: abort}
   function read(cb) {
     if (i == array.length) return cb(null, undefined)
     var value = array[i]
     i++
     cb(null, value)
+  }
+  function abort(cb) {
+    i = array.length
+    cb()
   }
 }
 
@@ -22,6 +26,8 @@ sources.fromReadableStream = function(readable) {
   readable.on('end', function() {
     hasEnded = true
   })
+
+  return {read: read, abort: abort}
 
   function read(cb) {
     if (hasEnded) {
@@ -44,7 +50,10 @@ sources.fromReadableStream = function(readable) {
     }
   }
 
-  return {read: read}
+  function abort(cb) {
+    hasEnded = true
+    cb()
+  }
 }
 
 module.exports = sources
