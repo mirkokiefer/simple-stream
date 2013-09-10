@@ -2,13 +2,26 @@
 var sinks = {}
 
 sinks.forEach = function(inputStream, fn) {
-  return continuable
-  function continuable(cb) {
-    inputStream.read(function(err, res) {
-      if (res === undefined) return cb(err, undefined)
-      fn(res)
-      setImmediate(continuable, cb)
-    })
+  return function(cb) {
+    var sameTick
+    loopRead()
+
+    function loopRead() {
+      do {
+        sameTick = undefined
+        read()
+        if (sameTick === undefined) sameTick = false
+      } while (sameTick)
+    }
+
+    function read() {
+      inputStream.read(function(err, res) {
+        if (res === undefined) return cb(err, undefined)
+        fn(res)
+        if (sameTick === undefined) sameTick = true
+        else loopRead()
+      })
+    }
   }
 }
 
