@@ -7,7 +7,7 @@ sinks.forEach = function(inputStream, fn) {
     inputStream.read(function(err, res) {
       if (res === undefined) return cb(err, undefined)
       fn(res)
-      continuable(cb)
+      setImmediate(continuable, cb)
     })
   }
 }
@@ -19,7 +19,7 @@ sinks.forEachAsync = function(inputStream, fn) {
       if (res === undefined) return cb(err, undefined)
       fn(res, function(err) {
         if (err) return cb(err)
-        continuable(cb)      
+        setImmediate(continuable, cb)
       })
     })
   }

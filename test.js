@@ -5,7 +5,7 @@ var fs = require('fs')
 var Readable = require('stream').Readable
 
 var numbers = []
-for (var i = 1; i < 100; i++) {
+for (var i = 1; i < 1000; i++) {
   numbers.push(i)
 }
 var doubleFn = function(each) { return each * 2 }
@@ -17,11 +17,11 @@ var createMockStream = function() {
   var index = -1
   return {read: read}
   function read(cb) {
-    setTimeout(function() {
+    setImmediate(function() {
       index++
       if (!numbers[index]) return cb(null, undefined)
       cb(null, numbers[index])
-    }, 1)
+    })
   }
 }
 
@@ -106,7 +106,7 @@ describe('simple-stream', function() {
         setTimeout(function() {
           bufferFillRatio += bufferIterator.bufferFillRatio() / numbers.length
           cb(null, res)
-        }, 2)
+        }, 1)
       })
       sstream.toArray(slowMapIterator)(function(err, res) {
         assert.deepEqual(res, numbers)
