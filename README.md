@@ -47,12 +47,12 @@ var streamStream = stream.fromReadableStream(readStream)
 Create an stream that applies a map function to transform each value of the source stream.
 
 ``` js
-var mapStream = stream.map(someNumberStream, function(err, each) {
+var mapStream = stream.map(someNumberStream, function(each) {
   return each * 2
 })
 
 // pipe the stream to an array:
-stream.toArray(mapStream, function(err, res) {
+stream.toArray(mapStream)(function(err, res) {
   console.log(res)
 })
 ```
@@ -61,7 +61,7 @@ stream.toArray(mapStream, function(err, res) {
 ### mapAsync(stream, mapFn) -> stream
 
 ``` js
-var mapStream = stream.map(someNumberStream, function(err, each, cb) {
+var mapStream = stream.map(someNumberStream, function(each, cb) {
   cb(null, each * 2)
 })
 ```
@@ -72,7 +72,7 @@ Create an stream that filters the values of the source stream using a filter fun
 ### filter(stream, filterFn) -> stream
 
 ``` js
-var evenNumbersStream = stream.filter(someNumberStream, function(err, each) {
+var evenNumbersStream = stream.filter(someNumberStream, function(each) {
   return (each % 2) == 0
 })
 ```
@@ -81,7 +81,7 @@ var evenNumbersStream = stream.filter(someNumberStream, function(err, each) {
 ### filterAsync(stream, filterFn) -> stream
 
 ``` js
-var evenNumbersStream = stream.filter(someNumberStream, function(err, each, cb) {
+var evenNumbersStream = stream.filter(someNumberStream, function(each, cb) {
   cb(null, (each % 2) == 0)
 })
 ```
@@ -133,7 +133,7 @@ Reads the source stream and writes the result to a [Writable Stream](http://node
 
 ``` js
 var writeStream = fs.createWriteStream('output.txt')
-stream.toWritableStream(stream, writeStream, 'utf8')(function() {
+stream.toWritableStream(stream, writeStream, 'utf8')(function(err) {
   console.log('done')
 })
 ```
@@ -143,9 +143,9 @@ stream.toWritableStream(stream, writeStream, 'utf8')(function() {
 Reads the source stream and invokes `fn` for each value of the stream.
 
 ``` js
-stream.forEach(someStream, function(err, data) {
+stream.forEach(someStream, function(data) {
   console.log(data)
-})(function() {
+})(function(err) {
   console.log('end')
 })
 ```
@@ -156,10 +156,10 @@ Reads the source stream and invokes `fn` for each value of the stream.
 Only once the callback is invoked the next value is read from the source stream.
 
 ``` js
-stream.forEachAsync(someStream, function(err, data, cb) {
+stream.forEachAsync(someStream, function(data, cb) {
   console.log(data)
   setTimeout(cb, 100)
-}(function() {
+}(function(err) {
   console.log('end')
 })
 ```
