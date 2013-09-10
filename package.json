@@ -1,8 +1,8 @@
 {
   "name": "simple-stream",
-  "version": "0.0.1",
-  "description": "utility functions simple streams",
-  "homepage": "https://github.com/mirkokiefer/async-iterators",
+  "version": "0.3.0",
+  "description": "utility functions for simple streams",
+  "homepage": "https://github.com/mirkokiefer/simple-stream",
   "main": "index.js",
   "scripts": {
     "test": "node_modules/.bin/mocha -R spec -t 5000"
